@@ -516,15 +516,23 @@ get_display_and_details_for_bus_sender (GdmManager       *self,
                 goto out;
         }
 
-        session_id = get_session_id_for_pid (pid, &error);
+        ret = gdm_find_display_session_for_uid (caller_uid, &session_id, &error);
 
         if (session_id == NULL) {
-                g_debug ("GdmManager: Error while retrieving session id for sender: %s",
+                g_debug ("GdmManager: Error while retrieving session id for sender: %s, trying fallback.",
                          error->message);
-                g_error_free (error);
-                goto out;
+                g_clear_pointer (&error, g_error_free);
+
+                /* No display session for the user - we're probably the
+                 * greeter; get the session for the PID if we can */
+                session_id = get_session_id_for_pid (pid, &error);
+                if (session_id == NULL) {
+                        g_debug ("GdmManager: Error while retrieving session id for sender: %s, failing.",
+                                 error->message);
+                        goto out;
+                }
         }
- 
+
         if (out_session_id != NULL) {
                 *out_session_id = g_strdup (session_id);
         }
