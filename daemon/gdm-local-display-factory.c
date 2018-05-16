@@ -28,6 +28,8 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
+#include <systemd/sd-login.h>
+
 #include "gdm-common.h"
 #include "gdm-manager.h"
 #include "gdm-display-factory.h"
@@ -460,6 +462,9 @@ gdm_local_display_factory_sync_seats (GdmLocalDisplayFactory *factory)
         while (g_variant_iter_loop (&iter, "(&so)", &seat, NULL)) {
                 gboolean is_initial;
                 const char *session_type = NULL;
+                char *session_id = NULL;
+                char *id = NULL;
+                GdmDisplay *display;
 
                 if (g_strcmp0 (seat, "seat0") == 0) {
                         is_initial = TRUE;
@@ -469,7 +474,16 @@ gdm_local_display_factory_sync_seats (GdmLocalDisplayFactory *factory)
                         is_initial = FALSE;
                 }
 
-                create_display (factory, seat, session_type, is_initial);
+                display = create_display (factory, seat, session_type, is_initial);
+                /*
+                 * If the seat has no active session, start a transient display
+                 * to allow the user to choose one.
+                 */
+                if (!display && sd_seat_get_active (seat, &session_id, NULL) == -ENODATA) {
+                        gdm_local_display_factory_create_transient_display (factory, &id, &error);
+                        g_clear_error (&error);
+                        g_free (id);
+                }
         }
 
         g_variant_unref (result);
