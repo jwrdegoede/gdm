@@ -1981,6 +1981,12 @@ on_user_session_started (GdmSession      *session,
                 }
         }
 #endif
+
+        if (gdm_session_get_display_mode (session) != GDM_SESSION_DISPLAY_MODE_REUSE_VT) {
+                GdmDisplay *display = get_greeter_display_from_session (manager, session);
+                if (display)
+                        gdm_display_schedule_kill_greeter (display, 5);
+        }
 }
 
 static void
@@ -2055,14 +2061,16 @@ on_session_reauthenticated (GdmSession *session,
                             const char *service_name,
                             GdmManager *manager)
 {
+        GdmDisplay *display = get_greeter_display_from_session (manager, session);
         gboolean fail_if_already_switched = FALSE;
 
-        if (gdm_session_get_display_mode (session) == GDM_SESSION_DISPLAY_MODE_REUSE_VT) {
-                GdmDisplay *display = get_greeter_display_from_session (manager, session);
-                if (display) {
+        if (display) {
+                if (gdm_session_get_display_mode (session) == GDM_SESSION_DISPLAY_MODE_REUSE_VT) {
                         gdm_display_stop_greeter_session (display);
                         gdm_display_unmanage (display);
                         gdm_display_finish (display);
+                } else {
+                        gdm_display_schedule_kill_greeter (display, 5);
                 }
         }
 

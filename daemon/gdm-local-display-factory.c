@@ -379,6 +379,7 @@ create_display (GdmLocalDisplayFactory *factory,
         store = gdm_display_factory_get_display_store (GDM_DISPLAY_FACTORY (factory));
         display = gdm_display_store_find (store, lookup_by_seat_id, (gpointer) seat_id);
         if (display != NULL) {
+                gdm_display_cancel_scheduled_kill_greeter (display);
                 return NULL;
         }
 
